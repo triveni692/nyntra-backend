@@ -13,7 +13,7 @@ module.exports = {
       // Verify we got a good "db" object
       if (db)
       {
-        _db = db.db("sandbox");
+        _db = db.db("questionbank");
         console.log("Successfully connected to MongoDB."); 
       }
       return callback(err);
