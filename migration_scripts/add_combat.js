@@ -14,6 +14,7 @@ function upload_contest_data(data, callback) {
 		u_contest_url,
 		name: data["name"],
 		starts_at: new Date(data["starts_at"]),
+		duration: data["quiz_details"]["duration"],
 		topics: data["topic_groups"].map(e => e["title"]),
 		description: data["description"] || "",
 		raw: JSON.stringify(data)
