@@ -23,9 +23,9 @@ function upload_contest_data(data, callback) {
 		if (err) {
 			if (err.message.includes("duplicate key error")) {
 				console.log("contest already exists!");
-				db.collection("contests").findOne({ u_id: contest["u_id"]}, (err, res) => {
-					if (err) throw err;
-					else callback(res["_id"]);
+				db.collection("contests").findOne({ u_id: contest["u_id"]}, (err1, res1) => {
+					if (err1) throw err1;
+					else callback(res1["_id"]);
 				})
 			}
 			else throw err;
