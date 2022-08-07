@@ -36,6 +36,10 @@ function upload_contest_data(data, callback) {
 }
 
 function upload_questions_data(data, contest_id, callback) {
+	if (!contest_id) {
+		console.log("Aborting questions insertion because contest ID not found");
+		return callback();
+	}
 	const questions = data["questions_data"].map(q => {
 		return {
 			contest_id,
@@ -54,6 +58,7 @@ function upload_questions_data(data, contest_id, callback) {
 		if (err) console.log(err);
 		else {
 			console.log("Inserted " + String(res["insertedCount"]) + " questions!");
+			console.log("insertedIds: ", res["insertedIds"]);
 			callback();
 		}
 	})
@@ -65,16 +70,18 @@ function upload_contest(callback) {
 		if (err) console.log(err);
 		else {
 			upload_contest_data(JSON.parse(data), (c_id) => {
-				fs.readFile(folder+"/data.json", "utf-8", (err, data) => {
-					if (err) console.log("error while reading data.json");
-					else upload_questions_data(JSON.parse(data), c_id, () => callback());
+				console.log("Contest ID: ", c_id);
+				fs.readFile(folder+"/data.json", "utf-8", (err1, data1) => {
+					if (err1) console.log("error while reading data.json");
+					else upload_questions_data(JSON.parse(data1), c_id, callback);
 				})
 			});
 		}
 	});
 }
 
-const combats = ["combat_2022-07-31"];
+const combats = ["combat_2022-08-07"];
+
 
 function upload_contest_rec(idx) {
 	if (idx == combats.length) return;
