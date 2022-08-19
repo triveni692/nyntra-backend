@@ -1,7 +1,6 @@
 const express = require("express");
 const questionRoutes = express.Router();
 const Question = require("../db/question");
-const ObjectId = require("MongoDb").ObjectId;
 
 const fields = ['_id', 'contest_id', 'u_id', 'correctAnswer', 'choices'];
 
