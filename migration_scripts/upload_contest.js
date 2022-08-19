@@ -5,7 +5,7 @@ const dbo = require("../db/conn");
 const Contest = require("../db/contest");
 const Question = require("../db/question");
 
-
+const TOKEN = process.env.BEARER_TOKEN;
 CONTEST_URL = 'https://api-frontend.unacademy.com/api/v1/uplus/subscription/test_series/?goal_uid=KSCGY&limit=500&offset=108&type=0'
 
 async function scrape(url) {
@@ -44,7 +44,7 @@ async function upload_contest(data) {
 
 	const SOL_URL = `https://unacademy.com/api/v1/uplus/contest/solution/?contest_uid=${data.uid}`;
 	const { data: solution } = await axios.get(SOL_URL, { headers: {
-		Authorization: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ijg5OWVhZWM2MDIxNjhhZWNmNTM2MzRjM2ExMGRhNTljIn0.eyJ1c2VyX2lkIjo5NzAzMjA3LCJ1aWQiOiJHUEtMVUhFSFVDIiwiZGlkIjoiIiwianRpIjoiMTpYU1BFT1Z4WHVtR05TR2ZVN2J3MHhOZldtWTN2NEkiLCJleHAiOjE2NjI1MzQ4MTksImlhdCI6MTY1OTk0MjgxOSwidHlwIjoxfQ.TQVV2JZPZPMUf0sXuUoaJLj3rXrXxyZ5P4tCv5zW6sxadJ9xKHTSPAwpTMkTWbK6f4wyDwCcc9HwUo4FFBd_hgvPvk8g0_AESX67sXPHLChi2RbM1R3xX166oSUaHT3kosbEwYnx2srKNxDrK2gLF816wVnA5NcsBNJ1uM6l7CRW6TSh69ILxLQm8ZryD6NeHJGNK_Rp1BpLH3TXAwnt_mR-DykFXL3W6oVvuKBcRLEy68uASGOXv1CkAbUa4z6I7MEQ-JgSNTNvQYwOInWTNoB0ngsEWlloV5D8URuwne9eTOfcqkMTz9cFq14N1NmVIpD3wZxgIKt-fe0hd30j6w",
+		Authorization: `Bearer ${TOKEN}`,
 		"Content-Type": "application/json"
 	}}).catch(e => console.log(e));
 
