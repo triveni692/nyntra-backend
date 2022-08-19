@@ -1,27 +1,17 @@
 const express = require("express");
 const contestRoutes = express.Router();
-const dbo = require("../db/conn");
-const ObjectId = require("mongodb").ObjectId;
-
-const exclude_raw = { projection: {raw: 0} };
+const Contest = require("../db/contest");
 
 // List contests
-contestRoutes.route("/contest").get((req, res) => {
-	const db = dbo.getDb();
-	db.collection("contests").find({}, exclude_raw).toArray((err, result) => {
-		if (err) throw err;
-		else res.json(result);
-	});
+contestRoutes.route("/contest").get(async (req, res) => {
+	const contest = await Contest.find({});
+	res.json(contest);
 });
 
 // Get contest
-contestRoutes.route("/contest/:id").get((req, res) => {
-	const db = dbo.getDb();
-	const filter = { _id: ObjectId(req.params.id) };
-	db.collection("contests").findOne(filter, exclude_raw, (err, result) => {
-		if (err) throw err;
-		else res.json(result);
-	});
+contestRoutes.route("/contest/:id").get(async (req, res) => {
+	const contest = await Contest.findOne({ _id: req.params.id });
+	res.json(contest);
 });
 
 module.exports = contestRoutes;
