@@ -1,7 +1,6 @@
 const axios = require('axios');
 require("dotenv").config({ path: "../config.env" });
 const cheerio = require("cheerio");
-const pretty = require("pretty");
 const dbo = require("../db/conn");
 const Contest = require("../db/contest");
 const Question = require("../db/question");
