@@ -6,7 +6,8 @@ const TOKEN = process.env.BEARER_TOKEN;
 const Contest = require("../db/contest");
 const Question = require("../db/question");
 
-const CONTEST_LIST = ["ORPIDB7J12", "IRVC3XHCYH", "VVRINRIBTF", "DHRZ1RKS9K", "YG3SNV2YR6", "XZ5CVVL8S4", "ID079X8Y31", "YD660X5YLF", "P2ZGCSOCSZ", "59QHYZRHK8", "1BYD1RAW3T", "GROPY928MM", "203OT3FNAT", "LL0JY7U62E", "T10FOL1H4M", "2AWVFBZO6V"];
+// const CONTEST_LIST = ["ORPIDB7J12", "IRVC3XHCYH", "VVRINRIBTF", "DHRZ1RKS9K", "YG3SNV2YR6", "XZ5CVVL8S4", "ID079X8Y31", "YD660X5YLF", "P2ZGCSOCSZ", "59QHYZRHK8", "1BYD1RAW3T", "GROPY928MM", "203OT3FNAT", "LL0JY7U62E", "T10FOL1H4M", "2AWVFBZO6V"];
+const CONTEST_LIST = ["6P0HALFP97", "TANVW9IS8G", "8HX6897D3R"];
 const headers = { headers: {
 	Authorization: `Bearer ${TOKEN}`,
 	"Content-Type": "application/json"
@@ -29,12 +30,12 @@ async function get_contest(id, index) {
 
 	const contest = {
 		u_contest_url: d.permalink,
-		test_series: "Mrunal 2022 Oct",
+		test_series: "Pathway to crack UPSC Prelims 2023",
 		u_id: d.uid,
-		name: `${d.title} - ${index+1}`,
+		name: d.title,
 		starts_at: new Date(d.start_time),
-		duration: d.duration,
-		topics: ["Indian Economy"],
+		duration: d.duration/60,
+		topics: [d.title.split("by")[0].trim()],
 		description: d.instructions,
 		raw: JSON.stringify(d)
 	}
@@ -42,10 +43,10 @@ async function get_contest(id, index) {
 	const solutions = data.results.map(q => ({
 		contest_id: null,
 		u_id: q.uid,
-		content: q.content["-1"],
+		content: q.content["1"],
 		correctAnswer: q.correct_answers_list[0],
-		choices: q.answers.map(c => ({ uid: c.uid, content: c.content["-1"] })),
-		solution_explanation: q.solution_explanation["-1"],
+		choices: q.answers.map(c => ({ uid: c.uid, content: c.content["1"] })),
+		solution_explanation: q.solution_explanation["1"],
 		solution_video_link: '',
 		raw: JSON.stringify(q)
 	}));
@@ -63,10 +64,16 @@ async function upload_contest(c) {
 	console.log(questions.map(q => `id_${q._id}__contest_id_${q.contest_id}`));
 }
 
+
 dbo.connectToServer(async err => {
 	if (err) return console.error(err);
 	
 	const contests = await Promise.all(CONTEST_LIST.map(get_contest));
+	// contests.forEach(c => {
+	// 	console.log(c.contest);
+	// 	console.log("\n-----\n");
+	// 	c.solutions.forEach(q => console.log(q));
+	// })
 	await Promise.all(contests.map(upload_contest));
 	console.log("\n\nDone!!!\n\n");
 });
