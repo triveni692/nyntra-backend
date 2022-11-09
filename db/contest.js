@@ -8,6 +8,7 @@ module.exports = mongoose.model('Contest', {
 	duration: Number,
 	topics: [String],
 	description: String,
-	test_series: String,
+	test_series: { type: String, index: true },
+	test_series_link: String,
 	raw: { type: String, select: false }
 });

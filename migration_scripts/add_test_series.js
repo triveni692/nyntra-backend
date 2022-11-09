@@ -6,7 +6,9 @@ const TOKEN = process.env.BEARER_TOKEN;
 const Contest = require("../db/contest");
 const Question = require("../db/question");
 
-const CONTEST_LIST = ["L9606ONRGW","X8KZIBF7F7","Q1387OVM58","ZJ63FXAHJP","C792SSELJX","5RU09JDZGH","VHH0ZKDYOT","WEDTJ0MRS2","078LAKSCLY","ZU5HWAPCQG","5HXCRBLTKQ","NZJ4C8NF8N","MERKPYUGDZ","PC0PA0PI2Z","T5BOWK40H2","02OA28ACV3","E25QGTSMSX","B806ZXD1I9","OGNNFJMGYC","KMQN2FF0CE","T53ZHE4S6O","BB51JNYFR1","ZCDA310XM7","Q7RFKE2W2W","8WAJHPJ91A","CHF0RNMOV3","VP2XT4OHVI","0TTLFVHGH1"];
+// Example: /test-series/upsc-cse-prelims-test-series-2024/D1MT6LRO, insert the last 8 digit ID.
+const TEST_SERIES = ["RLMAQZ0M"];
+
 const headers = { headers: {
 	Authorization: `Bearer ${TOKEN}`,
 	"Content-Type": "application/json"
@@ -15,15 +17,20 @@ const headers = { headers: {
 function get_topics(d) {
 	const ans = [];
 	d.forEach(e => {
-		e.concepts.forEach(t => ans.push(`${e.name} -> ${t}`));
+		e.concepts.forEach(t => ans.push(t));
 	});
 	return ans;
 }
 
 async function get_contest(id, index) {
-	const { data: d } = await axios.get(`https://unacademy.com/api/v3/quizzes/quiz/${id}/details/`, headers).catch(e => console.log(e));
-	const { data: session_data } = await axios.get(`https://unacademy.com/api/v1/quizzes/quiz/${id}/my_attempts/`, headers).catch(e => console.log(e));
-	const session_id = session_data.latest_session.uid;
+	const [{data: session}, {data: d}] = await Promise.all([
+		axios.post(`https://unacademy.com/api/v3/quizzes/quiz/${id}/enroll/`, {language: 1}, headers).catch(e => console.log(e)),
+		axios.get(`https://unacademy.com/api/v3/quizzes/quiz/${id}/details/`, headers).catch(e => console.log(e))
+	]);
+	const session_id = session.uid;
+	
+	await axios.post(`https://unacademy.com/api/v1/quizzes/session/${session_id}/finish_quiz/`, {}, headers).catch(e=>console.log(e));
+
 	const { data } = await axios.get(`https://api-frontend.unacademy.com/api/v2/quizzes/session/${session_id}/get_questions_paginated_with_attempts/?limit=100&offset=0`, headers).catch(e => console.log(e));
 
 	while (data.next) {
@@ -36,8 +43,10 @@ async function get_contest(id, index) {
 
 	const contest = {
 		u_contest_url: d.permalink,
-		test_series: "Prelims 2023 Test Series",
+		// TODO: needs change
+		test_series: "Science & Tech",
 		u_id: d.uid,
+		// TODO: needs change
 		name: d.title,
 		starts_at: new Date(d.start_time),
 		duration: d.duration/60,
@@ -73,14 +82,21 @@ async function upload_contest(c) {
 
 dbo.connectToServer(async err => {
 	if (err) return console.error(err);
-	
-	const contests = await Promise.all(CONTEST_LIST.map(get_contest));
-	// contests.forEach(c => {
-	// 	console.log(c.contest);
-	// 	console.log("-----");
-	// 	c.solutions.forEach(q => console.log(q));
-	// })
-	await Promise.all(contests.map(upload_contest));
+
+
+	await Promise.all(TEST_SERIES.map(async tid => {
+		let { data: contest_ids } = await axios.get(`https://unacademy.com/api/v2/collection/${tid}/items/?limit=600`);
+		contest_ids = contest_ids.results.filter(c => !c.value.time_remaining);
+		contest_ids = contest_ids.map(c => c.value.uid);
+
+		const contests = await Promise.all(contest_ids.map(get_contest));
+		// contests.forEach(c => {
+		// 	console.log(c.contest);
+		// 	console.log("-----");
+		// 	c.solutions.forEach(q => console.log(q));
+		// })
+		await Promise.all(contests.map(upload_contest));
+	}));
 	console.log("\n\nDone!!!\n\n");
 });
 

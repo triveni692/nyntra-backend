@@ -1,95 +1,89 @@
 const dbo = require("../db/conn");
-const fs = require("fs");
+const axios = require('axios');
+require("dotenv").config({ path: "../config.env" });
+const TOKEN = process.env.BEARER_TOKEN;
 
-let db = undefined;
+const headers = { headers: {
+	Authorization: `Bearer ${TOKEN}`,
+	"Content-Type": "application/json"
+}};
 
-let folder = "/Users/personal/MyDesktop/UPSC/Combats/combat_2021-04-25";
+const Contest = require("../db/contest");
+const Question = require("../db/question");
 
-function upload_contest_data(data, callback) {
-	const u_contest_url = data["contest_url"];
-	data = data["meta_data"];
+const MAX_LIMIT=20; // maximum number of contests to fetch
 
-	const contest = {
-		u_id: data["uid"],
-		u_contest_url,
-		name: data["name"],
-		starts_at: new Date(data["starts_at"]),
-		duration: data["quiz_details"]["duration"],
-		topics: data["topic_groups"].map(e => e["title"]),
-		description: data["description"] || "",
-		raw: JSON.stringify(data)
+async function get_all_contests() {
+	const uri = `https://unacademy.com/api/v1/uplus/contest/all/?goal_uid=KSCGY&preference=E0X317EU&state=0&limit=${MAX_LIMIT}&offset=0&state=1`;
+	let contests = (await axios.get(uri)).data.results;
+
+	contests = contests.map(d => ({
+		u_contest_url: `https://unacademy.com/goal/a/KSCGY/combat/b/${d.quiz_details.uid}/solution`,
+		test_series: "Combats",
+		u_id: d.uid,
+		name: d.name,
+		starts_at: new Date(d.starts_at),
+		duration: d.quiz_details.duration,
+		topics: d.topic_groups.map(e=>e.name),
+		description: d.instructions,
+		// raw: JSON.stringify(d)
+	}));
+
+	// console.log(contests[0]);
+
+	async function count(idx) {
+		// console.log(idx, contests.length);
+		return await Contest.count({"u_id": contests[idx].u_id});
 	}
 
-	db.collection("contests").insertOne(contest, function (err, res) {
-		if (err) {
-			if (err.message.includes("duplicate key error")) {
-				console.log("contest already exists!");
-				db.collection("contests").findOne({ u_id: contest["u_id"]}, (err1, res1) => {
-					if (err1) throw err1;
-					else callback(res1["_id"]);
-				})
-			}
-			else throw err;
-		}
-		else callback(res["_id"]);
-	});
-}
 
-function upload_questions_data(data, contest_id, callback) {
-	if (!contest_id) {
-		console.log("Aborting questions insertion because contest ID not found");
-		return callback();
+	let l = 0, r = contests.length - 1, m = 0;
+	while(r - l > 1) {
+		m = Math.floor((l + r) / 2);
+		if (await count(m)) r = m;
+		else l = m; 
 	}
-	const questions = data["questions_data"].map(q => {
-		return {
-			contest_id,
-			u_id: q["uid"],
-			content: q["content"],
-			correctAnswer: q["correctAnswer"],
-			choices: q["choices"].map(e => {
-				return { uid: e["uid"], content: e["content"] };
-			}),
-			solution_explanation: (q["solution"]["solution_explanation"] || ""),
-			solution_video_link: (q["solution"]["videoLink"] || ""),
-			raw: JSON.stringify(q)
-		}
-	});
-	db.collection("combat_questions").insertMany(questions, (err, res) => {
-		if (err) console.log(err);
-		else {
-			console.log("Inserted " + String(res["insertedCount"]) + " questions!");
-			console.log("insertedIds: ", res["insertedIds"]);
-			callback();
-		}
-	})
+	if (!await count(r)) m = r + 1;
+	else if (!await count(l)) m = l + 1;
+	else m = 0;
+	return contests.slice(0, m);
 }
 
-function upload_contest(callback) {
-	db = dbo.getDb();
-	fs.readFile(folder+"/meta.txt", "utf-8", (err, data) => {
-		if (err) console.log(err);
-		else {
-			upload_contest_data(JSON.parse(data), (c_id) => {
-				console.log("Contest ID: ", c_id);
-				fs.readFile(folder+"/data.json", "utf-8", (err1, data1) => {
-					if (err1) console.log("error while reading data.json");
-					else upload_questions_data(JSON.parse(data1), c_id, callback);
-				})
-			});
-		}
-	});
+async function upload_combat(cts) {
+	const uri = `https://unacademy.com/api/v1/uplus/contest/solution/?contest_uid=${cts.u_id}`;
+	let qs = (await axios.get(uri, headers)).data;
+	qs = qs.questions_data;
+	qs = qs.map(q => ({
+		contest_id: null,
+		u_id: q["uid"],
+		content: q["content"],
+		correctAnswer: q["correctAnswer"],
+		choices: q["choices"].map(e => {
+			return { uid: e["uid"], content: e["content"] };
+		}),
+		solution_explanation: (q["solution"]["solution_explanation"] || ""),
+		solution_video_link: (q["solution"]["videoLink"] || ""),
+		raw: JSON.stringify(q)
+	}));
+	// console.log(questions);
+	const contest = await Contest.create(cts).catch(e=>console.log(e));
+	console.log(contest._id, contest.name);
+	const questions = await Question.create(qs.map(s => ({...s, contest_id: contest._id}))).catch(e=>console.log(e));
+	console.log(questions.map(q => `id_${q._id}__contest_id_${q.contest_id}`));
 }
 
-const combats = ["combat_2022-08-07"];
+
+dbo.connectToServer(async err => {
+	if (err) return console.error(err);
+
+	const contests = await get_all_contests();
+	// console.log(contests);
+	console.log(contests.map(c => [c.name, c.starts_at]));
+
+	// await Promise.all(contests.map(upload_combat));
+
+	console.log("Done!!");
+});
 
 
-function upload_contest_rec(idx) {
-	if (idx == combats.length) return;
-	console.log(String(idx) + ": Uploading contest " + combats[idx]);
-	folder = "/Users/personal/MyDesktop/UPSC/Combats/" + combats[idx];
-	upload_contest(() => upload_contest_rec(idx + 1));
-}
 
-dbo.connectToServer(function (err) {
-	if (err) console.error(err);
-}, () => upload_contest_rec(0));
