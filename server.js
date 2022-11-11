@@ -9,6 +9,8 @@ app.use(require("./routes/question"));
 app.use(require("./routes/contest"));
 app.use(require("./routes/combat_questions"));
 app.use(require("./routes/login"));
+app.use(require("./routes/participate"));
+
 // get driver connection
 const dbo = require("./db/conn");
 
