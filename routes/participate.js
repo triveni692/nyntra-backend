@@ -98,6 +98,20 @@ routes.route("/attempt/:id").get(async function(req, res) {
 	return res.status(404).json({reason: "Not Found"});
 });
 
+routes.route("/attempt/:id").delete(async function(req, res) {
+	let [attempt, user] = await Promise.all([
+		Attempt.findOne({ _id: req.params.id }),
+		logged_user(req)
+	]);
+	if (!user) return res.status(401).json({reason: "unauthorized", message: ""});
+	if (attempt && user.equals(attempt.user_id)) {
+		await Options.deleteMany({attempt_id: attempt._id});
+		await Attempt.deleteOne({_id: attempt._id});
+		return res.status(204).json({});
+	}
+	return res.status(404).json({reason: "Not Found"});
+});
+
 // ------- Options ------
 
 routes.route("/options").post(async function(req, res) {
